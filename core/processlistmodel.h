@@ -1,8 +1,13 @@
 #ifndef PROCESSLISTMODEL_H
 #define PROCESSLISTMODEL_H
 
-#include <QAbstractListModel>
 #include "processmodel.h"
+#include <QProcess>
+#include <QAbstractListModel>
+
+/*
+ * Модель, позваляющая работать со списком ProcessModels
+*/
 
 class ProcessListModel : public QAbstractListModel
 {
@@ -10,8 +15,8 @@ class ProcessListModel : public QAbstractListModel
 public:
     enum Roles
     {
-        StandartOutput = Qt::UserRole + 0,
-        ErrorOutput = Qt::UserRole + 1,
+        Id = Qt::UserRole + 0,
+        Model = Qt::UserRole + 1,
     };
     Q_ENUM(Roles)
 
@@ -21,14 +26,13 @@ public:
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-    Qt::ItemFlags flags(const QModelIndex &index) const override;
-
-    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
-
     QHash<int, QByteArray> roleNames() const override;
 
 private:
     QList<ProcessModel*> m_models;
+
+    void insert(ProcessModel *process);
+    void onProcessCreated(ProcessModel *process);
 };
 
 #endif // PROCESSLISTMODEL_H

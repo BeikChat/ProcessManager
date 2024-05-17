@@ -1,49 +1,75 @@
 #include "processmanager.h"
+#include "qdebug.h"
 
 #include <execution>
 
+ProcessManager *ProcessManager::self = nullptr;
+
 ProcessManager::ProcessManager(QObject *parent)
-    : QObject{parent}, m_processesData{}
+    : QObject(parent), m_processModels(), m_searchStrings()
 {
-    Q_ASSERT_X(!ProcessManager::self, "ProcessManager", "there should be only one object");
+    Q_ASSERT_X(!ProcessManager::self, typeid(ProcessManager).name(), "there should be only one object");
 
     ProcessManager::self = this;
 }
 
-void ProcessManager::openProcess(const QString& programm, const QStringList& args, ProcessOptions options)
+ProcessManager::~ProcessManager()
 {
-    QProcess* process = new QProcess(this);
-
-    auto onExit = [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
-        Q_UNUSED(exitCode);
-        Q_UNUSED(exitStatus);
-        ProcessOptions options = getProcessOptions(process);
-        if (options.testFlag(ProcessOption::RestartOnExit))
-            process->start();
-    };
-
-    auto onError = [this, process](QProcess::ProcessError error) {
-        Q_UNUSED(error);
-        ProcessOptions options = getProcessOptions(process);
-        if (options.testFlag(ProcessOption::RestartOnError))
-            process->start();
-    };
-
-    connect(process, &QProcess::finished, this, onExit);
-    connect(process, &QProcess::errorOccurred, this, onError);
-
-    m_processesData.append({process, options});
-
-    process->start(programm, args);
 }
 
-ProcessManager::ProcessOptions ProcessManager::getProcessOptions(QProcess *process) const
+void ProcessManager::setSearchStrings(const QStringList &strings)
 {
-    auto predicate = [process](ProcessData data){ return data.process == process; };
-    auto iterator = std::find_if(m_processesData.cbegin(), m_processesData.cend(), predicate);
+    m_searchStrings = QSet<QString>(strings.constBegin(), strings.constEnd());
+}
 
-    if (iterator == m_processesData.cend())
-        return ProcessOption::AlwaysClose;
+QStringList ProcessManager::getSearchStrings() const
+{
+    return m_searchStrings.values();
+}
 
-    return iterator->options;
+qint64 ProcessManager::openProcess(const QString& programm, const QStringList& args, ProcessModel::ProcessOptions options)
+{
+    ProcessModel * processModel = new ProcessModel(programm, args, options, this);
+
+    m_processModels.append(processModel);
+
+    processModel->start();
+
+    emit processCreated(processModel);
+
+    return processModel->id();
+}
+
+ProcessModel *ProcessManager::processModel(qint64 processId) const
+{
+    auto predicate = [processId](ProcessModel *model){ return model->process()->processId() == processId; };
+    auto iterator = std::find_if(m_processModels.cbegin(), m_processModels.cend(), predicate);
+
+    if (iterator == m_processModels.cend())
+        return nullptr;
+
+    return (*iterator);
+}
+
+QProcess *ProcessManager::process(qint64 processId) const
+{
+    ProcessModel *model = processModel(processId);
+    if (model == nullptr)
+        return nullptr;
+
+    return model->process();
+}
+
+ProcessModel::ProcessOptions ProcessManager::processOptions(qint64 processId) const
+{
+    ProcessModel *model = processModel(processId);
+    if (model == nullptr)
+        return ProcessModel::AlwaysClose;
+
+    return model->options();
+}
+
+const QList<ProcessModel *> ProcessManager::processModels() const
+{
+    return m_processModels;
 }

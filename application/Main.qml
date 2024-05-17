@@ -3,19 +3,25 @@ import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
 
+import ProcessManager
+
 ApplicationWindow {
     width: 640
     height: 480
     visible: true
-    title: qsTr("Hello World")
+    title: qsTr("Process Manager")
 
-    menuBar: MenuBar {
-        id: menuBar
-        Menu {
-            title: "File"
-            Action { text: "New" }
-        }
-    }
+// - For tests -
+//    menuBar: MenuBar {
+//        id: menuBar
+//        Menu {
+//            title: "File"
+//            Action {
+//                text: "New"
+//                onTriggered: ProcessManager.createProcess("ConsoleApplication.exe")
+//            }
+//        }
+//    }
 
     RowLayout {
         anchors.margins: 5
@@ -26,7 +32,7 @@ ApplicationWindow {
             Layout.alignment: Qt.AlignLeft
             Layout.fillHeight: true
 
-            header: Text { text: "Title"; padding: 5 }
+            header: Text { text: "Process List"; padding: 5 }
 
             Rectangle {
                 anchors.fill: parent
@@ -41,14 +47,10 @@ ApplicationWindow {
                 delegate: ItemDelegate {
                     text: title
                     width: parent.width
-                    onClicked: processTabsView.open(title)
+                    onClicked: processTabsView.open(processModel)
                 }
 
-                model: ListModel {
-                    ListElement { title: "First"}
-                    ListElement { title: "Second"}
-                    ListElement { title: "Third"}
-                }
+                model: ProcessListModel {}
             }
         }
 
@@ -58,20 +60,10 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            component Process : QtObject {
-                property string title
-                property string desc
-            }
-
-            property Component template: Process {};
-
             property int activeIndex: 0
             Binding { processTabsView.activeIndex: processTabsBar.currentIndex }
 
-            property list<Process> openedProcces: [
-                Process { title: "First" },
-                Process { title: "Second" }
-            ]
+            property list<ProcessModel> openedProcces: []
 
             header: TabBar {
                 id: processTabsBar
@@ -90,13 +82,16 @@ ApplicationWindow {
 
                 Repeater {
                     model: processTabsView.openedProcces
-                    delegate: Rectangle { color: "#ff0000" }
+                    delegate: ProcessView {
+                        required property ProcessModel modelData
+                        process: modelData
+                    }//Rectangle { color: "#ff0000" }
                 }
             }
 
-            function indexOf(title) {
+            function indexOf(processModel) {
                 for(var i = 0; i < openedProcces.length; i++) {
-                    if (openedProcces[i].title === title)
+                    if (openedProcces[i].id === processModel.id)
                         return i
                 }
                 return -1
@@ -107,13 +102,12 @@ ApplicationWindow {
                     processTabsBar.currentIndex = index
             }
 
-            function open(title) {
-                let index = indexOf(title);
+            function open(processModel) {
+                let index = indexOf(processModel)
 
                 if (index < 0) {
-                    let process = template.createObject(this, { title: title })
-                    let length = openedProcces.push(process)
                     // вставляем всегда в конец
+                    let length = openedProcces.push(processModel)
                     index = length - 1
                 }
 

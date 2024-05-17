@@ -1,46 +1,45 @@
 #ifndef PROCESSMANAGER_H
 #define PROCESSMANAGER_H
 
+#include "processmodel.h"
 #include <QObject>
 #include <QProcess>
+#include <QSet>
+
+/*
+ * ProcessManager - singletone, запускающий дочерние потоки,
+ * а так же предоставляющий доступ к ним
+*/
 
 class ProcessManager : public QObject
 {
     Q_OBJECT
 
 public:
-    enum ProcessOption {
-        CloseOnExit = 0x0000,
-        RestartOnExit = 0x0001,
-
-        CloseOnError = 0x0000,
-        RestartOnError = 0x0002,
-
-        AlwaysRestart = RestartOnExit | RestartOnError,
-        AlwaysClose = CloseOnExit | CloseOnError,
-    };
-    Q_DECLARE_FLAGS(ProcessOptions, ProcessOption)
-
     static ProcessManager *instance() noexcept { return self; }
 
     explicit ProcessManager(QObject *parent = nullptr);
+    virtual ~ProcessManager();
 
-    void openProcess(const QString& programm, const QStringList& args = {}, ProcessOptions options = AlwaysRestart);
-    QList<QProcess*> processes() const;
+    void setSearchStrings(const QStringList &strings);
+    QStringList getSearchStrings() const;
 
-    ProcessOptions getProcessOptions(QProcess* process) const;
+    qint64 openProcess(const QString& programm, const QStringList& args = {}, ProcessModel::ProcessOptions options = ProcessModel::AlwaysRestart);
+
+    ProcessModel *processModel(qint64 processId) const;
+    QProcess* process(qint64 processId) const;
+    ProcessModel::ProcessOptions processOptions(qint64 processId) const;
+
+    const QList<ProcessModel*> processModels() const;
 
 signals:
+    void processCreated(ProcessModel* newProcess);
 
 private:
     static ProcessManager *self;
 
-    struct ProcessData {
-        QProcess* process;
-        ProcessOptions options;
-    };
-
-    QList<ProcessData> m_processesData;
+    QSet<QString> m_searchStrings;
+    QList<ProcessModel*> m_processModels;
 };
 
 #endif // PROCESSMANAGER_H

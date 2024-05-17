@@ -5,7 +5,7 @@ qt_add_library(ProcessManagerCore STATIC
     processmanager.h processmanager.cpp
 )
 
-target_link_libraries(ProcessManagerCore PRIVATE Qt6::Core)
+target_link_libraries(ProcessManagerCore PRIVATE Qt::Core)
 
 target_include_directories(ProcessManagerCore
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

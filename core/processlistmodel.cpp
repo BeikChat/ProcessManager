@@ -1,15 +1,21 @@
+#include "processmanager.h"
 #include "processlistmodel.h"
 
 ProcessListModel::ProcessListModel(QObject *parent)
-    : QAbstractListModel{parent}
+    : QAbstractListModel(parent)
 {
+    ProcessManager* processManager = ProcessManager::instance();
 
+    const QList<ProcessModel *> processModels = processManager->processModels();
+
+    for (ProcessModel* processModel : processModels)
+        insert(processModel);
+
+    connect(processManager, &ProcessManager::processCreated, this, &ProcessListModel::onProcessCreated);
 }
 
 int ProcessListModel::rowCount(const QModelIndex &parent) const
 {
-    // For list models only the root node (an invalid parent) should return the list's size. For all
-    // other (valid) parents, rowCount() should return 0 so that it does not become a tree model.
     if (parent.isValid())
         return 0;
 
@@ -21,37 +27,46 @@ QVariant ProcessListModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    int row = index.row();
-    if (row >= m_models.size())
+    if (index.row() >= m_models.size())
         return QVariant();
 
-    const ProcessModel *model = m_models.at(index.row());
+    ProcessModel *model = m_models.at(index.row());
 
     switch(role) {
         case Qt::DisplayRole:
-            return model->title();
         case Qt::EditRole:
             return model->title();
-        case StandartOutput:
-            return model->standartOutput();
-        case ErrorOutput:
-            return model->errorOutput();
+        case Id:
+            return model->id();
+        case Model:
+            return QVariant::fromValue(model);
     }
 
-    if (role == Qt::DisplayRole)
-        return model.content();
-    else if (role == Qt::EditRole)
-        return model.content();
-    else if (role == IdRole)
-        return model.id();
-    else if (role == UuidRole)
-        return model.uuid();
-    else if (role == CreationDateRole)
-        return model.creationDate();
-    else if (role == UpdateDateRole)
-        return model.updateDate();
-    else if (role == ContentRole)
-        return model.content();
-
     return QVariant();
+}
+
+QHash<int, QByteArray> ProcessListModel::roleNames() const
+{
+    QHash<int, QByteArray> roleNames = {
+        { Id, "processId" },
+        { Model, "processModel" }
+    };
+
+    roleNames.insert(QAbstractListModel::roleNames());
+
+    return roleNames;
+}
+
+void ProcessListModel::insert(ProcessModel *process)
+{
+    m_models.append(process);
+}
+
+void ProcessListModel::onProcessCreated(ProcessModel *process)
+{
+    beginInsertRows(QModelIndex(), rowCount(), rowCount());
+
+    insert(process);
+
+    endInsertRows();
 }

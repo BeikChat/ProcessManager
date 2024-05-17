@@ -6,14 +6,22 @@ qt_add_executable(ProcessManagerApplication
 )
 
 qt_add_qml_module(ProcessManagerApplication
-    URI ProcessManagerApplication
+    URI ProcessManager
     VERSION 1.0
+    NO_PLUGIN
     QML_FILES
         Main.qml
+        ProcessView.qml
     SOURCES
+        foreignprocesslistmodel.h
+        foreignprocessmanager.h
+        foreignprocessmodel.h
+)
 
-        SOURCES qmlprocessmanagersingleton.h qmlprocessmanagersingleton.cpp
-
+add_custom_command(TARGET ProcessManagerApplication POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_LIST_DIR}/settings.ini
+        $<TARGET_FILE_DIR:ProcessManagerApplication>
 )
 
 set_target_properties(ProcessManagerApplication PROPERTIES
@@ -26,7 +34,7 @@ set_target_properties(ProcessManagerApplication PROPERTIES
 target_link_libraries(ProcessManagerApplication
     PRIVATE
         ProcessManagerCore
-        Qt6::Quick
+        Qt::Quick
 
 )
 

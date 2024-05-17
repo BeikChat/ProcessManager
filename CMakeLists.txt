@@ -9,11 +9,6 @@ find_package(Qt6 6.4 REQUIRED COMPONENTS Quick)
 qt_standard_project_setup()
 
 add_subdirectory(core)
-add_subdirectory(quick)
 add_subdirectory(application)
 
-target_link_libraries(ProcessManagerApplication
-    PRIVATE
-        ProcessManagerCoreplugin
-        ProcessManagerQuickplugin
-)
+add_subdirectory(consoleApplication)
